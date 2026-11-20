@@ -1,87 +1,110 @@
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EnrollEase</title>
-<style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial;background:#f3f5fb;color:#27344b}
-header{background:#405ed0;color:white;padding:28px}
-main{max-width:850px;margin:auto;padding:20px}
-.card{background:white;padding:22px;border-radius:16px;margin:20px 0;box-shadow:0 4px 15px #00000008}
-input,select,button{padding:12px;border:1px solid #ddd;border-radius:8px;margin:6px 0}
-input,select{width:100%}
-button{background:#405ed0;color:white;border:0;cursor:pointer}
-.item{padding:15px;border-bottom:1px solid #eee}
-.done{color:green}
-</style>
-</head>
-<body>
-<header>
-<h1>🎓 EnrollEase</h1>
-<p>Your enrollment made easier.</p>
-</header>
-<main>
-<div class="card">
-<h2>Add Enrollment Requirement</h2>
-<input id="name" placeholder="Requirement name">
-<select id="status">
-<option>Pending</option>
-<option>Completed</option>
-</select>
-<input id="deadline" type="date">
-<button onclick="add()">+ Add Requirement</button>
-</div>
-<div class="card">
-<h2>My Requirements</h2>
-<input id="search" placeholder="Search requirements..." oninput="render()">
-<div id="list"></div>
-</div>
-</main>
-<script>
-let data=JSON.parse(localStorage.enrolleEase||'[]');
-function save(){
-localStorage.enrolleEase=JSON.stringify(data);
+const nameInput = document.getElementById("name");
+const statusInput = document.getElementById("status");
+const deadlineInput = document.getElementById("deadline");
+const searchInput = document.getElementById("search");
+const listElement = document.getElementById("list");
+
+let data = [];
+
+try {
+  data = JSON.parse(localStorage.getItem("enrolleEase") || "[]");
+  if (!Array.isArray(data)) data = [];
+} catch (error) {
+  data = [];
+}
+
+function save() {
+  try {
+    localStorage.setItem("enrolleEase", JSON.stringify(data));
+    render();
+  } catch (error) {
+    alert("Unable to save data in this browser.");
+  }
+}
+
+function add() {
+  const n = nameInput.value.trim();
+  const s = statusInput.value;
+  const d = deadlineInput.value;
+
+  if (!n) {
+    alert("Please enter a requirement name!");
+    nameInput.focus();
+    return;
+  }
+
+  data.unshift({
+    n: n,
+    s: s,
+    d: d
+  });
+
+  nameInput.value = "";
+  deadlineInput.value = "";
+
+  save();
+
+  alert("Enrollment requirement added successfully!");
+}
+
+function edit(i) {
+  const n = prompt("Edit requirement:", data[i].n);
+
+  if (n === null || !n.trim()) return;
+
+  const s = prompt(
+    "Status: Pending or Completed",
+    data[i].s
+  );
+
+  if (s === null) return;
+
+  if (!["Pending", "Completed"].includes(s)) {
+    alert("Please enter Pending or Completed.");
+    return;
+  }
+
+  data[i].n = n.trim();
+  data[i].s = s;
+
+  save();
+}
+
+function del(i) {
+  if (confirm("Are you sure you want to delete this requirement?")) {
+    data.splice(i, 1);
+    save();
+  }
+}
+
+function render() {
+  const q = searchInput.value.toLowerCase();
+
+  listElement.innerHTML = data
+    .map((x, i) => ({...x, i}))
+    .filter(x => x.n.toLowerCase().includes(q))
+    .map(x => `
+      <div class="item">
+        <h3>${escapeHTML(x.n)}</h3>
+        <p class="${x.s === "Completed" ? "done" : ""}">
+          ${escapeHTML(x.s)}
+        </p>
+        <p>Deadline: ${escapeHTML(x.d || "Not specified")}</p>
+        <button onclick="edit(${x.i})">Edit</button>
+        <button onclick="del(${x.i})">Delete</button>
+      </div>
+    `).join("") || "No requirements added.";
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[c]);
+}
+
 render();
-}
-function add(){
-let n=name.value.trim();
-if(!n)return alert('Enter a requirement');
-data.unshift({n,s:status.value,d:deadline.value});
-name.value=deadline.value='';
-save();
-}
-function edit(i){
-let n=prompt('Edit requirement',data[i].n);
-if(n&&n.trim())data[i].n=n.trim();
-let s=prompt('Status: Pending or Completed',data[i].s);
-if(s==='Pending'||s==='Completed')data[i].s=s;
-save();
-}
-function del(i){
-if(confirm('Delete requirement?')){
-data.splice(i,1);save();
-}
-}
-function render(){
-let q=search.value.toLowerCase();
-list.innerHTML=data.map((x,i)=>({...x,i}))
-.filter(x=>x.n.toLowerCase().includes(q))
-.map(x=>`
-<div class="item">
-<h3>${esc(x.n)}</h3>
-<p class="${x.s==='Completed'?'done':''}">${esc(x.s)}</p>
-<p>Deadline: ${esc(x.d||'Not specified')}</p>
-<button onclick="edit(${x.i})">Edit</button>
-<button onclick="del(${x.i})">Delete</button>
-</div>`).join('')||'No requirements added.';
-}
-function esc(s){
-return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-render();
-</script>
-</body>
-</html>
